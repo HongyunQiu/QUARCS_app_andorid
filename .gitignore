@@ -1,0 +1,39 @@
+# Qt Creator user settings
+*.pro.user
+*.pro.user.*
+
+# Android / Qt build outputs
+/build-qt-android/
+/build-qt6-android-arm64/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Gradle / Android local machine files
+.gradle/
+.cxx/
+local.properties
+.qmake.stash
+
+# Android signing files
+*.jks
+*.keystore
+
+# Build logs
+*.log
+
+# Editor / OS clutter
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Generated embedded web UI assets from QUARCS_stellarium-web-engine
+/android-sources/.android/
+/android-sources/assets/webui/
+/android-sources/assets/webui-manifest.json
+
+# Local backup files
+qml.qrc.bak.*

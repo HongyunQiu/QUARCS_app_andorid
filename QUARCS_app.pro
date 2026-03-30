@@ -12,12 +12,24 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         apphostservice.cpp \
         compatibilitycommandserver.cpp \
+        debuglogservice.cpp \
         serverfinder.cpp \
         bluetoothscanner.cpp \
         devicegatewayservice.cpp \
         embeddedassethttpserver.cpp \
         filterwheelservice.cpp \
         focuserservice.cpp \
+        hardware/adapters/focuser/default_focuser_device.cpp \
+        hardware/adapters/focuser/qfocuser_adapter.cpp \
+        hardware/adapters/mount/default_mount_device.cpp \
+        hardware/adapters/mount/onstep_mount_adapter.cpp \
+        hardware/core/mount/onstep/onstep_mount_core.cpp \
+        hardware/core/mount/onstep/onstep_mount_protocol.cpp \
+        hardware/core/focuser/qfocuser/qfocuser_core.cpp \
+        hardware/core/focuser/qfocuser/qfocuser_protocol.cpp \
+        hardware/devices/device_registry.cpp \
+        hardware/transports/tcp_transport.cpp \
+        hardware/transports/usb_serial_transport.cpp \
         guiderservice.cpp \
         imagingservice.cpp \
         mountservice.cpp \
@@ -44,6 +56,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     apphostservice.h \
     compatibilitycommandserver.h \
+    debuglogservice.h \
     compatcommandservice.h \
     serverfinder.h \
     bluetoothscanner.h \
@@ -51,6 +64,20 @@ HEADERS += \
     embeddedassethttpserver.h \
     filterwheelservice.h \
     focuserservice.h \
+    hardware/adapters/focuser/default_focuser_device.h \
+    hardware/adapters/focuser/qfocuser_adapter.h \
+    hardware/adapters/mount/default_mount_device.h \
+    hardware/adapters/mount/onstep_mount_adapter.h \
+    hardware/core/focuser/qfocuser/qfocuser_core.h \
+    hardware/core/focuser/qfocuser/qfocuser_protocol.h \
+    hardware/core/mount/onstep/onstep_mount_core.h \
+    hardware/core/mount/onstep/onstep_mount_protocol.h \
+    hardware/devices/device_registry.h \
+    hardware/devices/focuser_device_interface.h \
+    hardware/devices/mount_device_interface.h \
+    hardware/transports/tcp_transport.h \
+    hardware/transports/transport_interface.h \
+    hardware/transports/usb_serial_transport.h \
     guiderservice.h \
     imagingservice.h \
     mountservice.h \

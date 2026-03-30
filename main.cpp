@@ -6,6 +6,7 @@
 
 #include "apphostservice.h"
 #include "compatibilitycommandserver.h"
+#include "debuglogservice.h"
 #include "embeddedassethttpserver.h"
 #include "serverfinder.h"
 #include "wifiinfoprovider.h"
@@ -165,6 +166,7 @@ QString getAppVersion() {
 
 int main(int argc, char *argv[])
 {
+    DebugLogService::installMessageHandler();
     // qputenv("QML_XHR_ALLOW_FILE_READ", "1");
     qDebug() << "SSL 支持状态:" << QSslSocket::supportsSsl();
     qDebug() << "SSL 版本:" << QSslSocket::sslLibraryVersionString();

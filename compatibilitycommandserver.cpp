@@ -1,16 +1,61 @@
 #include "compatibilitycommandserver.h"
 
 #include "apphostservice.h"
+#include "debuglogservice.h"
+#include "hardware/devices/device_registry.h"
 
+#include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QWebSocket>
 #include <QWebSocketServer>
 
+#ifdef Q_OS_ANDROID
+#include <QJniObject>
+#endif
+
+namespace {
+
+QString detectPreferredSerialPort()
+{
+    const QDir devDir(QStringLiteral("/dev"));
+    const QStringList candidates = devDir.entryList(
+        QStringList()
+            << QStringLiteral("ttyACM*")
+            << QStringLiteral("ttyUSB*")
+            << QStringLiteral("ttyS*"),
+        QDir::System | QDir::Files,
+        QDir::Name);
+
+    if (candidates.isEmpty()) {
+        return {};
+    }
+
+    return devDir.absoluteFilePath(candidates.constFirst());
+}
+
+QString describeAndroidUsbDevices()
+{
+#ifdef Q_OS_ANDROID
+    const QJniObject description = QJniObject::callStaticObjectMethod(
+        "org/qtproject/example/QUARCS_app/UsbSerialBridge",
+        "describeConnectedDevices",
+        "()Ljava/lang/String;");
+    return description.isValid() ? description.toString() : QStringLiteral("jni-error");
+#else
+    return QStringLiteral("unsupported");
+#endif
+}
+
+}
+
 CompatibilityCommandServer::CompatibilityCommandServer(AppHostService *appHostService, QObject *parent)
     : QObject(parent)
     , m_appHostService(appHostService)
 {
+    connect(&DebugLogService::instance(), &DebugLogService::logAppended, this, [this](const QString &entry) {
+        broadcastLogMessage(entry);
+    });
 }
 
 CompatibilityCommandServer::~CompatibilityCommandServer()
@@ -36,6 +81,11 @@ bool CompatibilityCommandServer::start(quint16 preferredPort)
         while (m_server->hasPendingConnections()) {
             QWebSocket *socket = m_server->nextPendingConnection();
             m_clients.insert(socket);
+
+            const QStringList backlog = DebugLogService::instance().recentEntries();
+            for (const QString &entry : backlog) {
+                sendLogMessage(socket, entry);
+            }
 
             connect(socket, &QWebSocket::textMessageReceived, this, [this, socket](const QString &message) {
                 onTextMessageReceived(socket, message);
@@ -67,6 +117,7 @@ void CompatibilityCommandServer::onTextMessageReceived(QWebSocket *socket, const
     const QString commandMessage = payload.value(QStringLiteral("message")).toString();
 
     if (type == QStringLiteral("Vue_Command")) {
+        DebugLogService::instance().logManual(QStringLiteral("Vue_Command"), commandMessage);
         const QStringList responses = handleVueCommand(commandMessage);
         for (const QString &response : responses) {
             sendQtReturn(socket, response);
@@ -86,6 +137,25 @@ void CompatibilityCommandServer::sendQtReturn(QWebSocket *socket, const QString 
     response.insert(QStringLiteral("type"), QStringLiteral("QT_Return"));
     response.insert(QStringLiteral("message"), message);
     socket->sendTextMessage(QString::fromUtf8(QJsonDocument(response).toJson(QJsonDocument::Compact)));
+}
+
+void CompatibilityCommandServer::sendLogMessage(QWebSocket *socket, const QString &message) const
+{
+    if (!socket) {
+        return;
+    }
+
+    QJsonObject response;
+    response.insert(QStringLiteral("type"), QStringLiteral("QT_Log"));
+    response.insert(QStringLiteral("message"), message);
+    socket->sendTextMessage(QString::fromUtf8(QJsonDocument(response).toJson(QJsonDocument::Compact)));
+}
+
+void CompatibilityCommandServer::broadcastLogMessage(const QString &message) const
+{
+    for (QWebSocket *socket : m_clients) {
+        sendLogMessage(socket, message);
+    }
 }
 
 QStringList CompatibilityCommandServer::handleVueCommand(const QString &message)
@@ -132,6 +202,10 @@ QStringList CompatibilityCommandServer::handleHostCommand(const QString &command
         return {QStringLiteral("QTClientVersion:%1").arg(m_appHostService->appVersion())};
     }
 
+    if (command == QStringLiteral("getRecentLogs")) {
+        return DebugLogService::instance().recentEntries();
+    }
+
     if (command == QStringLiteral("getTotalVersion")) {
         return {QStringLiteral("TotalVersion:%1").arg(m_appHostService->totalVersion())};
     }
@@ -166,18 +240,47 @@ QStringList CompatibilityCommandServer::handleHostCommand(const QString &command
             const QString key = payload.left(payloadSeparator);
             const QString value = payload.mid(payloadSeparator + 1);
             m_appHostService->writeSetting(key, value);
+            if (key == QStringLiteral("MountSerialPort") ||
+                key == QStringLiteral("MountBaudRate") ||
+                key == QStringLiteral("MountTcpEndpoint")) {
+                DeviceRegistry::reloadMountDevice();
+            }
+            if (key == QStringLiteral("FocuserSerialPort") ||
+                key == QStringLiteral("FocuserBaudRate") ||
+                key == QStringLiteral("FocuserTcpEndpoint")) {
+                DeviceRegistry::reloadFocuserDevice();
+            }
         }
         return {};
     }
 
-    if (command == QStringLiteral("loadSDKVersionAndUSBSerialPath")) {
+    if (command == QStringLiteral("loadMountConfig")) {
+        QString mountPath = m_appHostService->readSetting(QStringLiteral("MountSerialPort"));
+        if (mountPath.trimmed().isEmpty()) {
+            mountPath = detectPreferredSerialPort();
+        }
+        const QString baud = m_appHostService->readSetting(QStringLiteral("MountBaudRate"), QStringLiteral("9600"));
+        const QString tcp = m_appHostService->readSetting(QStringLiteral("MountTcpEndpoint"));
         return {
-            QStringLiteral("SDKVersionAndUSBSerialPath:MainCamera:AndroidBridge:null:Guider:AndroidBridge:null:Focuser:AndroidBridge:null")
+            QStringLiteral("MountTransportConfig:%1:%2:%3")
+                .arg(mountPath.isEmpty() ? QStringLiteral("null") : mountPath,
+                     baud.isEmpty() ? QStringLiteral("9600") : baud,
+                     tcp.isEmpty() ? QStringLiteral("null") : tcp)
         };
     }
 
-    if (command == QStringLiteral("getFocuserParameters")) {
-        return {QStringLiteral("FocuserParameters:0:10000:0:10:1")};
+    if (command == QStringLiteral("loadSDKVersionAndUSBSerialPath")) {
+        QString focuserPath = m_appHostService->readSetting(QStringLiteral("FocuserSerialPort"));
+        if (focuserPath.trimmed().isEmpty()) {
+            focuserPath = detectPreferredSerialPort();
+        }
+        DebugLogService::instance().logManual(
+            QStringLiteral("USB"),
+            QStringLiteral("Connected USB devices: %1").arg(describeAndroidUsbDevices()));
+        return {
+            QStringLiteral("SDKVersionAndUSBSerialPath:MainCamera:AndroidBridge:null:Guider:AndroidBridge:null:Focuser:QFocuser:%1")
+                .arg(focuserPath.isEmpty() ? QStringLiteral("null") : focuserPath)
+        };
     }
 
     if (command == QStringLiteral("getGPIOsStatus")) {

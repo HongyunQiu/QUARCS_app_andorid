@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>QUARCS Hardware Debug</title>
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Embedded Lite UI</p>
+          <h1>QUARCS Hardware Debug Console</h1>
+          <p class="summary">
+            A fast, lightweight page for validating focuser transport, connection, and movement
+            without packaging the full Stellarium frontend.
+          </p>
+        </div>
+        <div class="hero-status">
+          <div class="status-label">Bridge</div>
+          <div id="ws-status" class="status-pill status-idle">Connecting...</div>
+          <div id="base-url" class="status-meta"></div>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="panel panel-config">
+          <div class="panel-heading">
+            <p class="panel-kicker">Setup</p>
+            <h2>Focuser Transport</h2>
+          </div>
+          <label>
+            <span>Serial Port</span>
+            <input id="serial-port" type="text" placeholder="/dev/ttyACM0">
+          </label>
+          <label>
+            <span>Baud Rate</span>
+            <input id="baud-rate" type="number" value="9600">
+          </label>
+          <label>
+            <span>TCP Endpoint</span>
+            <input id="tcp-endpoint" type="text" placeholder="192.168.1.10:6000">
+          </label>
+          <div class="button-row">
+            <button data-command="save-serial">Save Serial</button>
+            <button data-command="save-baud">Save Baud</button>
+            <button data-command="save-tcp">Save TCP</button>
+            <button data-command="reload-config" class="secondary">Reload Config</button>
+          </div>
+        </section>
+
+        <section class="panel panel-config">
+          <div class="panel-heading">
+            <p class="panel-kicker">Setup</p>
+            <h2>Mount Transport</h2>
+          </div>
+          <label>
+            <span>Mount Serial Port</span>
+            <input id="mount-serial-port" type="text" placeholder="/dev/ttyACM1">
+          </label>
+          <label>
+            <span>Mount Baud Rate</span>
+            <input id="mount-baud-rate" type="number" value="9600">
+          </label>
+          <label>
+            <span>Mount TCP Endpoint</span>
+            <input id="mount-tcp-endpoint" type="text" placeholder="192.168.1.10:9998">
+          </label>
+          <div class="button-row">
+            <button data-command="save-mount-serial">Save Mount Serial</button>
+            <button data-command="save-mount-baud">Save Mount Baud</button>
+            <button data-command="save-mount-tcp">Save Mount TCP</button>
+            <button data-command="reload-mount-config" class="secondary">Reload Mount Config</button>
+          </div>
+        </section>
+
+        <section class="panel panel-actions">
+          <div class="panel-heading">
+            <p class="panel-kicker">Validation</p>
+            <h2>Focuser Quick Actions</h2>
+          </div>
+          <div class="button-grid">
+            <button data-vue-command="FocuserConnect">Connect</button>
+            <button data-vue-command="FocuserDisconnect" class="secondary">Disconnect</button>
+            <button data-vue-command="FocuserSelfTest">Self Test</button>
+            <button data-vue-command="getFocuserParameters" class="secondary">Read Parameters</button>
+            <button data-vue-command="connectAllDevice">Connect All</button>
+            <button data-vue-command="disconnectAllDevice" class="secondary">Disconnect All</button>
+          </div>
+
+          <div class="move-strip">
+            <label>
+              <span>Step Count</span>
+              <input id="move-steps" type="number" value="100">
+            </label>
+            <div class="button-row">
+              <button data-command="move-left" class="danger">Move Left</button>
+              <button data-command="move-right">Move Right</button>
+              <button data-vue-command="focusMoveStop:false" class="secondary">Stop</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel panel-actions">
+          <div class="panel-heading">
+            <p class="panel-kicker">Validation</p>
+            <h2>Mount Quick Actions</h2>
+          </div>
+          <div class="button-grid">
+            <button data-vue-command="MountConnect">Mount Connect</button>
+            <button data-vue-command="MountDisconnect" class="secondary">Mount Disconnect</button>
+            <button data-vue-command="MountSelfTest">Mount Self Test</button>
+            <button data-vue-command="getMountParameters" class="secondary">Read Mount State</button>
+            <button data-vue-command="MountTrack">Track Toggle</button>
+            <button data-vue-command="MountPark" class="secondary">Park Toggle</button>
+            <button data-vue-command="MountMoveAbort" class="danger">Abort Motion</button>
+            <button data-vue-command="MountSpeedSwitch" class="secondary">Cycle Speed</button>
+          </div>
+
+          <div class="move-strip">
+            <div class="button-row">
+              <button data-vue-command="MountMoveWest">RA- West</button>
+              <button data-vue-command="MountMoveEast">RA+ East</button>
+              <button data-vue-command="MountMoveNorth">DEC+ North</button>
+              <button data-vue-command="MountMoveSouth">DEC- South</button>
+            </div>
+          </div>
+
+          <div class="move-strip">
+            <label>
+              <span>Goto RA (hours)</span>
+              <input id="mount-goto-ra" type="number" step="0.001" value="5.500">
+            </label>
+            <label>
+              <span>Goto DEC (degrees)</span>
+              <input id="mount-goto-dec" type="number" step="0.001" value="22.000">
+            </label>
+            <div class="button-row">
+              <button data-command="mount-goto">Goto</button>
+              <button data-vue-command="MountSYNC" class="secondary">Sync Current</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel panel-console">
+          <div class="panel-heading">
+            <p class="panel-kicker">Console</p>
+            <h2>Live Bridge Messages</h2>
+          </div>
+          <div class="button-row compact">
+            <button data-command="clear-log" class="secondary">Clear Log</button>
+            <button data-command="ping-version" class="secondary">Read Version</button>
+          </div>
+          <pre id="log-output" class="log-output"></pre>
+        </section>
+      </main>
+    </div>
+
+    <script src="/quarcs-runtime-config.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

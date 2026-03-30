@@ -23,6 +23,9 @@ local.properties
 # Build logs
 *.log
 
+# Local automation artifacts
+/doc/android_lite_ui_test_*.json
+
 # Editor / OS clutter
 *~
 *.swp

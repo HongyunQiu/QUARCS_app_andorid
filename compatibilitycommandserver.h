@@ -34,6 +34,8 @@ signals:
 private:
     void onTextMessageReceived(QWebSocket *socket, const QString &message);
     void sendQtReturn(QWebSocket *socket, const QString &message) const;
+    void sendLogMessage(QWebSocket *socket, const QString &message) const;
+    void broadcastLogMessage(const QString &message) const;
     QStringList handleVueCommand(const QString &message);
     QStringList handleHostCommand(const QString &command, const QString &payload);
 

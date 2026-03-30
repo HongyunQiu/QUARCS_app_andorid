@@ -5,12 +5,14 @@ PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_ROOT="${PROJECT_DIR}/build-qt6-android-arm64"
 ANDROID_BUILD_DIR="${BUILD_ROOT}/android-build"
 APK_PATH="${ANDROID_BUILD_DIR}/build/outputs/apk/debug/android-build-debug.apk"
+PACKAGED_APK_PATH="${ANDROID_BUILD_DIR}/QUARCS_app.apk"
 DEPLOY_SETTINGS="${BUILD_ROOT}/android-QUARCS_app-deployment-settings.json"
 LOG_DIR="${PROJECT_DIR}/doc"
 LOG_FILE="${LOG_DIR}/build_android_$(date +%Y%m%d_%H%M%S).log"
 QT_ANDROID_QMAKE="${QT_ANDROID_QMAKE:-/home/q/Qt/6.5.3/android_arm64_v8a/bin/qmake}"
 ANDROID_ABIS="${ANDROID_ABIS:-arm64-v8a}"
 MAKE_JOBS="${MAKE_JOBS:-2}"
+EMBEDDED_UI_MODE="${QUARCS_EMBEDDED_UI_MODE:-full}"
 
 mkdir -p "$LOG_DIR"
 
@@ -70,7 +72,8 @@ resolve_default_ndk() {
   [[ -x "$QT_ANDROID_QMAKE" ]] || fail "未找到可执行的 qmake: $QT_ANDROID_QMAKE"
 
   log "同步内置前端资源"
-  bash "${PROJECT_DIR}/prepare_embedded_webui.sh"
+  log "内嵌前端模式: $EMBEDDED_UI_MODE"
+  QUARCS_EMBEDDED_UI_MODE="$EMBEDDED_UI_MODE" bash "${PROJECT_DIR}/prepare_embedded_webui.sh"
 
   if [[ "${CLEAN:-0}" == "1" ]]; then
     log "执行清理: 删除旧构建目录 $BUILD_ROOT"
@@ -85,6 +88,10 @@ resolve_default_ndk() {
   fi
 
   [[ -f "$DEPLOY_SETTINGS" ]] || fail "未找到部署设置文件: $DEPLOY_SETTINGS"
+
+  log "清理旧 APK 输出，避免增量打包复用旧布局导致体积异常"
+  rm -f "$PACKAGED_APK_PATH" "$APK_PATH"
+  rm -rf "${ANDROID_BUILD_DIR}/build/outputs/apk/debug"
 
   log "执行构建: make apk -j$MAKE_JOBS"
   (cd "$BUILD_ROOT" && make apk -j"$MAKE_JOBS")

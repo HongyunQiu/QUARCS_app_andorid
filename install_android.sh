@@ -54,7 +54,18 @@ fi
 
 log "使用设备: $DEVICE"
 log "安装 APK: $APK_PATH"
-adb -s "$DEVICE" install -r "$APK_PATH"
+set +e
+INSTALL_OUTPUT="$(adb -s "$DEVICE" install -r "$APK_PATH" 2>&1)"
+INSTALL_STATUS=$?
+set -e
+printf '%s\n' "$INSTALL_OUTPUT"
+
+if [[ $INSTALL_STATUS -ne 0 ]]; then
+  if grep -Fq "INSTALL_FAILED_ABORTED: User rejected permissions" <<<"$INSTALL_OUTPUT"; then
+    fail "手机拒绝了 ADB 覆盖安装。请在设备上允许安装，或打开系统里的“USB 安装/ADB 安装”后重试。"
+  fi
+  fail "ADB 安装失败。"
+fi
 
 log "安装完成，检查包名..."
 adb -s "$DEVICE" shell pm list packages | grep -i -E 'quarcs|org.qtproject.example.QUARCS_app' || true

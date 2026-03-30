@@ -1,5 +1,7 @@
 #include "hardware/devices/device_registry.h"
 
+#include "hardware/adapters/camera/default_camera_device.h"
+#include "hardware/adapters/camera/qhyccd_camera_adapter.h"
 #include "hardware/adapters/focuser/qfocuser_adapter.h"
 #include "hardware/adapters/mount/onstep_mount_adapter.h"
 #include "hardware/transports/tcp_transport.h"
@@ -14,6 +16,31 @@
 #include <memory>
 
 namespace {
+
+std::unique_ptr<ICameraDevice> &cameraDeviceStorage()
+{
+    static std::unique_ptr<ICameraDevice> device;
+    return device;
+}
+
+std::unique_ptr<ICameraDevice> createCameraDevice()
+{
+    const QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    QSettings settings(QStringLiteral("QUARCS"), QStringLiteral("EmbeddedFrontend"));
+
+    const QString configuredBackend = settings.value(QStringLiteral("bridge/MainCameraBackend")).toString().trimmed();
+    const QString backend = !configuredBackend.isEmpty()
+        ? configuredBackend.toLower()
+        : env.value(QStringLiteral("QUARCS_CAMERA_BACKEND"), QStringLiteral("qhyccd")).trimmed().toLower();
+
+    if (backend == QStringLiteral("default") || backend == QStringLiteral("simulation")) {
+        qDebug() << "DeviceRegistry selected default camera backend";
+        return std::unique_ptr<ICameraDevice>(new DefaultCameraDevice());
+    }
+
+    qDebug() << "DeviceRegistry selected QHYCCD camera backend";
+    return std::unique_ptr<ICameraDevice>(new QhyccdCameraAdapter());
+}
 
 std::unique_ptr<IMountDevice> &mountDeviceStorage()
 {
@@ -135,6 +162,15 @@ std::unique_ptr<ITransport> createMountTransport()
 
 }
 
+ICameraDevice &DeviceRegistry::cameraDevice()
+{
+    std::unique_ptr<ICameraDevice> &device = cameraDeviceStorage();
+    if (!device) {
+        device = createCameraDevice();
+    }
+    return *device;
+}
+
 IMountDevice &DeviceRegistry::mountDevice()
 {
     std::unique_ptr<IMountDevice> &device = mountDeviceStorage();
@@ -151,6 +187,15 @@ IFocuserDevice &DeviceRegistry::focuserDevice()
         device.reset(new QFocuserAdapter(createFocuserTransport()));
     }
     return *device;
+}
+
+void DeviceRegistry::reloadCameraDevice()
+{
+    std::unique_ptr<ICameraDevice> &device = cameraDeviceStorage();
+    if (device) {
+        device->disconnect();
+    }
+    device = createCameraDevice();
 }
 
 void DeviceRegistry::reloadFocuserDevice()

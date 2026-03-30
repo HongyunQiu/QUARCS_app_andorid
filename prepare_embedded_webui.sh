@@ -38,7 +38,15 @@ mkdir -p "$ANDROID_SOURCES_ASSET_ROOT"
 mkdir -p "$ANDROID_BUILD_ASSET_ROOT"
 
 for target in "${WEBUI_TARGETS[@]}"; do
-  rm -rf "$target"
+  python3 - "$target" <<'PY'
+import shutil
+import sys
+from pathlib import Path
+
+target = Path(sys.argv[1])
+if target.exists():
+    shutil.rmtree(target)
+PY
   mkdir -p "$target"
   cp -a "$DIST_DIR"/. "$target"/
 done

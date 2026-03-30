@@ -25,6 +25,7 @@ local.properties
 
 # Local automation artifacts
 /doc/android_lite_ui_test_*.json
+/doc/android_camera_bridge_test_*.json
 
 # Editor / OS clutter
 *~

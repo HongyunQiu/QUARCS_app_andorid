@@ -9,6 +9,38 @@ QT += bluetooth
 
 CONFIG += c++17
 DEFINES += QT_DEPRECATED_WARNINGS
+
+android {
+    QHY_SDK_DIR = /home/q/workspace/QHYCCD_SDK_CrossPlatform
+    LIBUSB_ANDROID_DIR = $$QHY_SDK_DIR/libusb-1.0.android
+
+    exists($$LIBUSB_ANDROID_DIR/android/config.h) {
+        # libusb and QHY SDK both ship a config.h. Keep libusb's Android
+        # config first so libusbi.h resolves the correct platform defines.
+        INCLUDEPATH = $$LIBUSB_ANDROID_DIR/android $$INCLUDEPATH
+        INCLUDEPATH += $$LIBUSB_ANDROID_DIR/libusb
+        INCLUDEPATH += $$LIBUSB_ANDROID_DIR/libusb/os
+    }
+    exists($$QHY_SDK_DIR/src/qhyccd.h) {
+        INCLUDEPATH += $$QHY_SDK_DIR/src
+    }
+    exists($$QHY_SDK_DIR/qhy_jni/aarch64/libqhyccd.a) {
+        LIBS += $$QHY_SDK_DIR/qhy_jni/aarch64/libqhyccd.a
+    }
+
+    SOURCES += \
+        $$LIBUSB_ANDROID_DIR/libusb/core.c \
+        $$LIBUSB_ANDROID_DIR/libusb/descriptor.c \
+        $$LIBUSB_ANDROID_DIR/libusb/hotplug.c \
+        $$LIBUSB_ANDROID_DIR/libusb/io.c \
+        $$LIBUSB_ANDROID_DIR/libusb/sync.c \
+        $$LIBUSB_ANDROID_DIR/libusb/strerror.c \
+        $$LIBUSB_ANDROID_DIR/libusb/os/linux_usbfs.c \
+        $$LIBUSB_ANDROID_DIR/libusb/os/events_posix.c \
+        $$LIBUSB_ANDROID_DIR/libusb/os/threads_posix.c \
+        $$LIBUSB_ANDROID_DIR/libusb/os/linux_netlink.c
+}
+
 SOURCES += \
         apphostservice.cpp \
         compatibilitycommandserver.cpp \
@@ -19,10 +51,14 @@ SOURCES += \
         embeddedassethttpserver.cpp \
         filterwheelservice.cpp \
         focuserservice.cpp \
+        hardware/adapters/camera/default_camera_device.cpp \
+        hardware/adapters/camera/qhyccd_camera_adapter.cpp \
         hardware/adapters/focuser/default_focuser_device.cpp \
         hardware/adapters/focuser/qfocuser_adapter.cpp \
         hardware/adapters/mount/default_mount_device.cpp \
         hardware/adapters/mount/onstep_mount_adapter.cpp \
+        hardware/core/camera/qhyccd/qhyccd_camera_core.cpp \
+        hardware/core/camera/qhyccd/qhyccd_camera_sdk_bridge.cpp \
         hardware/core/mount/onstep/onstep_mount_core.cpp \
         hardware/core/mount/onstep/onstep_mount_protocol.cpp \
         hardware/core/focuser/qfocuser/qfocuser_core.cpp \
@@ -64,14 +100,19 @@ HEADERS += \
     embeddedassethttpserver.h \
     filterwheelservice.h \
     focuserservice.h \
+    hardware/adapters/camera/default_camera_device.h \
+    hardware/adapters/camera/qhyccd_camera_adapter.h \
     hardware/adapters/focuser/default_focuser_device.h \
     hardware/adapters/focuser/qfocuser_adapter.h \
     hardware/adapters/mount/default_mount_device.h \
     hardware/adapters/mount/onstep_mount_adapter.h \
+    hardware/core/camera/qhyccd/qhyccd_camera_core.h \
+    hardware/core/camera/qhyccd/qhyccd_camera_sdk_bridge.h \
     hardware/core/focuser/qfocuser/qfocuser_core.h \
     hardware/core/focuser/qfocuser/qfocuser_protocol.h \
     hardware/core/mount/onstep/onstep_mount_core.h \
     hardware/core/mount/onstep/onstep_mount_protocol.h \
+    hardware/devices/camera_device_interface.h \
     hardware/devices/device_registry.h \
     hardware/devices/focuser_device_interface.h \
     hardware/devices/mount_device_interface.h \
